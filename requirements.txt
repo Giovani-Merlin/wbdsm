@@ -1,0 +1,6 @@
+tqdm==4.64.1
+pymongo==4.3.3
+pandas==1.5.3
+flower==0.9.7
+celery==4.4.7
+redis==4.5.4
