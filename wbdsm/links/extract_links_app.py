@@ -8,7 +8,7 @@ from flower.utils.broker import Broker
 from pymongo import MongoClient
 
 from wbdsm.links.celeryconfig import broker_url
-from wbdsm.links.extract_links_task import extract_links, index_mentions
+from wbdsm.links.extract_links_task import extract_links, index_links
 from wbdsm.links.extract_links_worker import app
 from wbdsm.wbdsm_args_parser_backup import WBDSMArgsParser
 
@@ -56,18 +56,18 @@ if __name__ == "__main__":
             .limit(1)
         )
 
-    # all_jobs.append(
-    #     chain(
-    #         extract_links.s(articles[0]["pageID"], CHUNK_SIZE), index_mentions.s()
-    #     ).apply_async()
-    # )
+    all_jobs.append(
+        chain(
+            extract_links.s(articles[0]["pageID"], CHUNK_SIZE), index_links.s()
+        ).apply_async()
+    )
     n_pages = 0
     while articles:
         time_to_get = datetime.now()
         logger.info(f"Got page in {datetime.now() - time_to_get}")
         time_to_chain = datetime.now()
-        debug = extract_links(articles[-1]["pageID"], limit=CHUNK_SIZE)
-        test = index_mentions(debug)
+        #       debug = extract_links(articles[-1]["pageID"], limit=CHUNK_SIZE)
+        #        test = index_links(debug)
         articles = list(
             pages.find({"pageID": {"$gt": articles[0]["pageID"]}, "isRedirect": False})
             .sort("pageID", 1)
@@ -79,7 +79,7 @@ if __name__ == "__main__":
         all_jobs.append(
             chain(
                 extract_links.s(articles[0]["pageID"], CHUNK_SIZE),
-                index_mentions.s(),
+                index_links.s(),
             ).apply_async()
         )
         n_pages = n_pages + CHUNK_SIZE
@@ -87,26 +87,24 @@ if __name__ == "__main__":
         page_batch = []
         # Avoid memory overflow
         if n_pages % 100000 == 0:
-            queue_size = broker.queues(["mentions_to_extract"]).result()[0]["messages"]
+            queue_size = broker.queues(["links_to_extract"]).result()[0]["messages"]
             logger.info(f"Queue size: {queue_size}")
             # Wait to reduce queue
             while queue_size > 50:
-                queue_size = broker.queues(["mentions_to_extract"]).result()[0][
-                    "messages"
-                ]
+                queue_size = broker.queues(["links_to_extract"]).result()[0]["messages"]
                 logger.info(f"Queue size: {queue_size}")
                 time.sleep(1)
 
     # Wait to finish all jobs
     # Could use results backend but given the size of the data, it is not worth it
     # Easily we can overflow redis memory
-    indexing_jobs = broker.queues(["mentions_to_index"]).result()[0]["messages"]
-    extract_jobs = broker.queues(["mentions_to_extract"]).result()[0]["messages"]
+    indexing_jobs = broker.queues(["links_to_index"]).result()[0]["messages"]
+    extract_jobs = broker.queues(["links_to_extract"]).result()[0]["messages"]
     jobs = indexing_jobs + extract_jobs
     while jobs:
         time.sleep(1)
-        indexing_jobs = broker.queues(["mentions_to_index"]).result()[0]["messages"]
-        extract_jobs = broker.queues(["mentions_to_extract"]).result()[0]["messages"]
+        indexing_jobs = broker.queues(["links_to_index"]).result()[0]["messages"]
+        extract_jobs = broker.queues(["links_to_extract"]).result()[0]["messages"]
         jobs = indexing_jobs + extract_jobs
         logger.info(f"Jobs: {jobs}")
 
