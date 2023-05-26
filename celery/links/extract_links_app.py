@@ -34,6 +34,7 @@ if __name__ == "__main__":
     #
     page_batch = []
     all_jobs = []
+    # To check if the app is working
     i = app.control.inspect()
     # to track the status of the tasks
     broker = Broker(broker_url)
@@ -55,15 +56,16 @@ if __name__ == "__main__":
             .limit(1)
         )
 
-    # all_jobs.append(
-    #     chain(
-    #         extract_links_task.s(articles[0]["pageID"], CHUNK_SIZE), index_links_task.s()
-    #     ).apply_async()
-    # )
+    all_jobs.append(
+        chain(
+            extract_links_task.s(articles[0]["pageID"], CHUNK_SIZE),
+            index_links_task.s(),
+        ).apply_async()
+    )
     n_pages = 0
     while articles:
-        debug = extract_links_task(skip=articles[-1]["pageID"], limit=CHUNK_SIZE)
-        test = index_links_task(links=debug)
+        #        debug = extract_links_task(skip=articles[-1]["pageID"], limit=CHUNK_SIZE)
+        #        test = index_links_task(links=debug)
         articles = list(
             pages.find({"pageID": {"$gt": articles[0]["pageID"]}, "isRedirect": False})
             .sort("pageID", 1)

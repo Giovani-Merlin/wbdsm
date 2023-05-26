@@ -56,6 +56,9 @@ def extract_links(
 def extract_section_links(
     section: Section, pages_collection: Collection, source_page: Page
 ):
+    """
+    For each link in the section, parse the link and retrieve the source page of the link.
+    """
     # Keep track of the last link to reduce the search space (links are ordered)
     last_link_position = 0
     extracted_links = []
@@ -81,6 +84,9 @@ def parse_page_link(
     source_page: Page,
     pages_collection: Collection,
 ):
+    """
+    Parse a link to a wikipedia page. It do links scanning progressively, as we don't have the link position from dumpster-dive but we have an ordered list of links.
+    """
     section_text_to_scan = section.content[last_link_position:]
     link_text = link.text
     links_to_section = link.section
@@ -140,7 +146,13 @@ def parse_page_link(
 
 def translate_link(links_to: str, pages_collection: Collection, links_to_section: str):
     """
-    Translate the link's information to the source page of the link, included its section.
+    Translate the link's information to the source page of the link.
+    It handles the redirects and the links to sections.
+
+    If links_to_sections is None and links to a redirect, and the redirect has a redirectToSection it will use it.
+            # ! TODO(GM): verify if this is correct:
+        If it has redirectToSection and the links has a section, it will use the section of the link.
+
     """
 
     projections = {"sections": 0}
@@ -160,21 +172,23 @@ def translate_link(links_to: str, pages_collection: Collection, links_to_section
                     {"title": links_to_encoded_title},
                     projections,
                 )
-                # If redirect page doesn't exist, set links_to to None
+                # Redirect to an invalid page (broken redirect)
                 if links_to_article_page is None:
                     links_to = None
-                # ! TODO(GM): Using source doc section as the correct position, but needs to check it.
+
                 # If the correct is from the redirect page, we should enable it here without the "if"
                 elif links_to_section:
                     links_to_section = links_to_article_page_obj.redirectToSection
-            # Some links sends to a redirect page, which can be a redirect to a section.
             else:
+                # Redirect to nothing (broken redirect)
                 links_to = None
 
         else:
+            # Not a redirect, all good
             links_to = links_to_encoded_title
 
     else:
+        # No reference
         links_to = None
 
     return links_to, links_to_section

@@ -48,7 +48,7 @@ This section is just the use of dumpster-dive, with some changes of the default 
 ```bash
 cd dumpster
 npm instlal .
-node index_wiki_mongo.js ~/Downloads/wikipedia/de/dewiki-20230501-pages-articles-multistream.xml de mongodb://localhost:27017/ 
+node index_wiki_mongo.js ~/Downloads/wikipedia/fr/frwiki-20230501-pages-articles-multistream.xml de mongodb://localhost:27017/ 
 ```
 
 This will take a while (75 min for the english wikipedia, 20 for german*)
@@ -58,21 +58,47 @@ This will take a while (75 min for the english wikipedia, 20 for german*)
 
 1. Pull redis `docker pull redis` and run it `docker run --name redis_celery -d -p 6379:6379 redis | docker run redis`
 2. ~Change the attributes in IndexMentions class on wbdsm.links.extract_links_task to match the desired language and mongoDB connection string.~ Problem with the bootsraping of the celery app, for now changing it manually. If you know why the bootstraping is not working, please let me know.
+3. Run the workers - created a script to do all these steps on scripts/start_workers.sh but it seems that the detached mode is not working. For now, run the following commands on different terminals:
 
- Default configurations to run the workers in a local machine
-
-<https://stackoverflow.com/questions/55249197/what-are-the-consequences-of-disabling-gossip-mingle-and-heartbeat-for-celery-w>
-cd wbdsm/links
-celery -A extract_links_worker worker -Ofair --queues=links_to_extract --loglevel=info --concurrency=17 --language de --mongo_uri mongodb://localhost:27017 -n extract
- celery -A extract_links_worker worker -Ofair --queues=links_to_index --loglevel=info --concurrency=2  --language de --mongo_uri mongodb://localhost:27017 -n index
+```bash
+cd celery/links
+mongo_uri="mongodb://localhost:27017"
+language="fr"
+celery -A extract_links_worker worker -Ofair --queues=links_to_extract --loglevel=info --concurrency=17 --language $language --mongo_uri $mongo_uri -n extract --detach
+celery -A extract_links_worker worker -Ofair --queues=links_to_index --loglevel=info --concurrency=2  --language $language --mongo_uri $mongo_uri -n index --detach
+python extract_links_app.py --mongo_uri $mongo_uri --language $language
+```
 
 1:53 for 2.48M articles generating 53.8M links
-to purge
 
+If you need to purge the queues, run:
+
+```bash
 celery -A extract_links_worker purge --queues links_to_extract -f
 celery -A extract_links_worker purge --queues links_to_index -f
+```
+
+It's usefull to follow the progress of the workers. For that, you can use:
 
 flower: `celery --broker=redis://localhost:6379/0 flower`
-3. Rank pages - 14 min DE
 
+## Rank Pages
+
+After extracting the links, we can rank the pages based on the number of links that point to them. This can be done running the script analyze_dataset.py. It expects the mongoDB connection string and the language code as arguments. Example:
+
+```bash
+python scripts/analyze_dataset.py --mongo_uri mongodb://localhost:27017/ --language fr
 ```
+
+1. Rank pages - 14 min DE
+2. Generate dataset - 09:01 started
+
+# TOTAL
+
+75 min wikipedia dump
+
+Extraction started 23:30 -> 24gb memory redis uses a lot, max to 26 and 5 swap . 5gb Just for turning on the workers, 22gb to run mongo
+
+3h16 td 113m
+40 min to count and index rank
+11:15 started dataset 100k 10 10 1kk candidates
