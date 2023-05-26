@@ -49,6 +49,7 @@ def encode_id(text: str, upper_case_first_letter: bool = True, encode_title=Fals
         )
 
     text = text.replace("&", "&amp;").replace('"', "&quot;")
+    text = text.strip()
 
     return text
 

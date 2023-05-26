@@ -3,13 +3,13 @@ import time
 from datetime import datetime
 
 import pymongo
-from celery import chain
+from celeryconfig import broker_url
+from extract_links_worker import app
+from extract_links_task import extract_links_task, index_links_task
 from flower.utils.broker import Broker
 from pymongo import MongoClient
 
-from wbdsm.links.celeryconfig import broker_url
-from wbdsm.links.extract_links_task import extract_links, index_links
-from wbdsm.links.extract_links_worker import app
+from celery import chain
 from wbdsm.wbdsm_arg_parser import WBDSMArgParser
 
 logger = logging.getLogger(__name__)
@@ -35,7 +35,6 @@ if __name__ == "__main__":
     page_batch = []
     all_jobs = []
     i = app.control.inspect()
-
     # to track the status of the tasks
     broker = Broker(broker_url)
     # Create compound index between pageID and isRedirect
@@ -56,18 +55,15 @@ if __name__ == "__main__":
             .limit(1)
         )
 
-    all_jobs.append(
-        chain(
-            extract_links.s(articles[0]["pageID"], CHUNK_SIZE), index_links.s()
-        ).apply_async()
-    )
+    # all_jobs.append(
+    #     chain(
+    #         extract_links_task.s(articles[0]["pageID"], CHUNK_SIZE), index_links_task.s()
+    #     ).apply_async()
+    # )
     n_pages = 0
     while articles:
-        time_to_get = datetime.now()
-        logger.info(f"Got page in {datetime.now() - time_to_get}")
-        time_to_chain = datetime.now()
-        #       debug = extract_links(articles[-1]["pageID"], limit=CHUNK_SIZE)
-        #        test = index_links(debug)
+        debug = extract_links_task(skip=articles[-1]["pageID"], limit=CHUNK_SIZE)
+        test = index_links_task(links=debug)
         articles = list(
             pages.find({"pageID": {"$gt": articles[0]["pageID"]}, "isRedirect": False})
             .sort("pageID", 1)
@@ -78,8 +74,8 @@ if __name__ == "__main__":
             break
         all_jobs.append(
             chain(
-                extract_links.s(articles[0]["pageID"], CHUNK_SIZE),
-                index_links.s(),
+                extract_links_task.s(articles[0]["pageID"], CHUNK_SIZE),
+                index_links_task.s(),
             ).apply_async()
         )
         n_pages = n_pages + CHUNK_SIZE

@@ -8,7 +8,7 @@ app = Celery(
     "Extract mentions project",
 )
 
-default_config = "wbdsm.links.celeryconfig"
+default_config = "celeryconfig"
 app.config_from_object(default_config)
 # Add options to worker
 app.user_options["worker"].add(
