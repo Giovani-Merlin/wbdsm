@@ -1,0 +1,25 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                "--language","de",
+                "--mongo_uri","mongodb://localhost:27017",
+                "--max_rank","100000",
+                "--test_size","1000",
+                "--validation_size","1000",
+                "--candidates_size","2000000",
+                "--candidate_text_surfaces","10"
+            ]
+        }
+    ]
+}

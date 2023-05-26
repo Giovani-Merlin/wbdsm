@@ -34,7 +34,7 @@ HERE LINK TO DOCS
 
 ## Requirements
 
-Docker, MongoDB, Redis, npm and nodejs 18
+Docker, MongoDB, Redis, npm and nodejs 18. Python versions used was 3.9.16
 
 ## How to use
 
@@ -53,3 +53,26 @@ node index_wiki_mongo.js ~/Downloads/wikipedia/de/dewiki-20230501-pages-articles
 
 This will take a while (75 min for the english wikipedia, 20 for german*)
 /* Using 12th Gen Intel(R) Core(TM) i7-12700H
+
+## Extract links
+
+1. Pull redis `docker pull redis` and run it `docker run --name redis_celery -d -p 6379:6379 redis | docker run redis`
+2. ~Change the attributes in IndexMentions class on wbdsm.links.extract_links_task to match the desired language and mongoDB connection string.~ Problem with the bootsraping of the celery app, for now changing it manually. If you know why the bootstraping is not working, please let me know.
+
+ Default configurations to run the workers in a local machine
+
+<https://stackoverflow.com/questions/55249197/what-are-the-consequences-of-disabling-gossip-mingle-and-heartbeat-for-celery-w>
+cd wbdsm/links
+celery -A extract_links_worker worker -Ofair --queues=links_to_extract --loglevel=info --concurrency=17 --language de --mongo_uri mongodb://localhost:27017 -n extract
+ celery -A extract_links_worker worker -Ofair --queues=links_to_index --loglevel=info --concurrency=2  --language de --mongo_uri mongodb://localhost:27017 -n index
+
+1:53 for 2.48M articles generating 53.8M links
+to purge
+
+celery -A extract_links_worker purge --queues links_to_extract -f
+celery -A extract_links_worker purge --queues links_to_index -f
+
+flower: `celery --broker=redis://localhost:6379/0 flower`
+3. Rank pages - 14 min DE
+
+```

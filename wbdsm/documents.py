@@ -92,7 +92,7 @@ class Page:
 
     def __post_init__(self):
         self.id = decode_id(self.id)
-        self.title = clean_text(self.title)
+        self.title = decode_id(self.title)
 
     @classmethod
     def from_mongo(cls, data, language):

@@ -10,19 +10,19 @@ from pymongo import MongoClient
 from wbdsm.links.celeryconfig import broker_url
 from wbdsm.links.extract_links_task import extract_links, index_links
 from wbdsm.links.extract_links_worker import app
-from wbdsm.wbdsm_args_parser_backup import WBDSMArgsParser
+from wbdsm.wbdsm_arg_parser import WBDSMArgParser
 
 logger = logging.getLogger(__name__)
 if __name__ == "__main__":
     #
 
-    parser = WBDSMArgsParser()
+    parser = WBDSMArgParser()
     args = parser.parse_known_args()[0].__dict__
 
     mongo_uri = args["mongo_uri"]
     language = args["language"]
     db_name = language + "wiki"
-    last_id = args.get("last_id")
+    last_id = args.get("last_pageID")
 
     client = MongoClient(mongo_uri)
     pages = client[db_name]["pages"]

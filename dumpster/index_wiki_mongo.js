@@ -14,13 +14,13 @@ let obj = {
   coordinates: false,
   wikitext: false,
   templates: false,
-  citations: true,
+  citations: false,
   domain: "wikipedia.org",
   url: true,
   lang: argv[3],
   isRedirect: true,
   redirectTo: true,
-  list: true,
+  list: false,
   batch_size:500,
   custom: function (doc) {
     //const sections =  doc.sections().map((i) => JSON.stringify({"text": i.text(), "title": i.title()}));
@@ -50,7 +50,7 @@ let obj = {
       _id:  doc.title(),
       // Index by title to match li0nks implementation - link#section is always by section title
       sections: doc.sections().reduce((acc, i) => { acc[encode_key(i)] = sectionMap(i); return acc; }, {}),
-      categories: doc.categories(),
+      //categories: doc.categories(),
       isRedirect: doc.isRedirect(),
       redirectTo: doc.redirectTo(),
       url: doc.url(),
