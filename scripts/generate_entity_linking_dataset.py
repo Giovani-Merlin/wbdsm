@@ -1,14 +1,14 @@
 import json
 import logging
 import os
-from itertools import cycle
-from typing import List
 
 from pymongo import MongoClient
 
-from wbdsm.documents import Page
-from wbdsm.links.entity_linking.queries import get_entity_linking_query
-from wbdsm.preprocessing import clean_text
+
+from wbdsm.links.entity_linking.process_mongodb import (
+    create_links_dataset_by_agg,
+    get_abstracts,
+)
 from wbdsm.wbdsm_arg_parser import WBDSMArgParser
 
 logger = logging.getLogger(__name__)
@@ -31,181 +31,16 @@ client = MongoClient(mongo_uri)
 pages_collection = client[db_name]["pages"]
 links_collection = client[db_name]["links"]
 
-
-def get_left_right_query(start_index, end_index, link, text):
-    """
-    Get the left and right query of a link.
-    """
-    link_on_query = text[start_index:end_index]
-    link_query_left = text[max(0, start_index - args["query_max_chars"]) : start_index]
-    link_query_right = text[
-        end_index : min(len(text), end_index + args["query_max_chars"]) + 1
-    ]
-    try:
-        assert link == link_on_query
-        return link_query_left, link_query_right
-    except AssertionError:
-        # ! TODO(GM): Should not ever happen, It's a problem of the normalization of the source doc mixing different documents together. Really rare so not a priority.
-        logger.error(
-            "link {} is not in the query {} || {}".format(
-                link, link_query_left, link_query_right
-            )
-        )
-        return None, None
-
-
-def get_dataset_item(section, link, index):
-    """
-    Given a dict of links to a candidate_doc and a dict of query documents return the dataset items.
-    """
-
-    item = {}
-    item["link"] = link["text"]
-    item["candidate_index"] = link["candidate_index"]
-    item["source_doc"] = link["source_doc"]
-    item["source_doc_section"] = section.title
-    item["query_left"], item["query_right"] = get_left_right_query(
-        link["start"],
-        link["end"],
-        link["text"],
-        section.content,
+max_rank = args["max_rank"]
+if max_rank:
+    logger.info(f"Getting abstracts from rank 0 to {max_rank}")
+    abstracts = get_abstracts(
+        min_rank=0, max_rank=max_rank, pages_collection=pages_collection
     )
-    item["query_index"] = index
-
-    return item
-
-
-def get_abstracts(min_rank, max_rank, init_index=0):
-    """
-    Get abstracts from min_rank to max_rank.
-    If max_rank is None, get all the abstracts from min_rank.
-    If min_rank is None, get all the abstracts from 0 to max_rank.
-    If both are None, get all the abstracts - even without reference rank.
-
-    """
-    project = {"_id": 0, "sections.Abstract.text": 1, "reference_rank": 1, "title": 1}
-    query = {"isRedirect": False}
-    query["reference_rank"] = {}
-    if max_rank:
-        query["reference_rank"]["$lt"] = max_rank
-    if min_rank:
-        query["reference_rank"]["$gte"] = min_rank
-
-    pages_query = pages_collection.find(
-        query, projection=project, no_cursor_timeout=True
-    )
-    abstracts = pages_query.batch_size(10000)
-    logger.info("Starting to iterate over the abstracts")
-    abstract_total = []
-    index = 0
-    for row in abstracts:
-        # Gets the abstract
-        abstract = row["sections"].get("Abstract", None)
-        # Years and some list pages doesn't have abstract - skip
-        if abstract and len(abstract["text"]) > 64:
-            abstract = clean_text(abstract["text"])
-            abstract_total.append(
-                {
-                    "candidate": row["title"],
-                    "abstract": abstract,
-                    "reference_rank": row["reference_rank"],
-                    "candidate_index": index + init_index,
-                }
-            )
-            index += 1
-    logger.info("Finished iterating over the abstracts")
-
-    return abstract_total
-
-
-def create_links_dataset_by_agg(abstract_titles: List[str], output_path: str):
-    links_query = {"$match": {"links_to": {"$in": abstract_titles}}}
-    sample = {
-        "$sample": {
-            "size": 1e7,
-        },
-    }
-    # Shuffle the result
-    sample_shuffle = {"$sample": {"size": len(abstract_titles)}}
-    agg_query = get_entity_linking_query(
-        candidate_surface_appearance=candidate_surface_appearance,
-        candidate_text_surfaces=candidate_text_surfaces,
-    )
-    # Allow disk use - we are using a lot of memory
-    agg_links = links_collection.aggregate(
-        [sample, links_query] + agg_query + [sample_shuffle], allowDiskUse=True
-    ).batch_size(10000)
-    logger.info("Stop")
-    index_link = 0
-    BATCH_SIZE = 100
-    batch_n = 0
-    # We will have approx BATCH SIZE * n_text_surfaces * n_querys_per_surface items in memory at the same time per batch
-    # Open the links json lines file
-    links_file = open(os.path.join(output_path, "links.jsonl"), "w")
-    cursor_alive = True
-    while cursor_alive:
-        # Batch of links
-        batch = []
-        for _ in range(BATCH_SIZE):
-            try:
-                batch.append(next(agg_links))
-            except StopIteration:
-                cursor_alive = False
-                break
-        # Flatten the links
-        links_per_title = [link for link_dict in batch for link in link_dict["links"]]
-        links_per_doc = [
-            link for link_dict in links_per_title for link in link_dict["link"]
-        ]
-        source_doc_ids = [doc["source_doc"] for doc in links_per_doc]
-        # Add the candidate index
-        for link_doc in links_per_doc:
-            link_doc["candidate_index"] = abstract_titles.index(link_doc["links_to"])
-        # Get the docs with the sections
-        docs = list(pages_collection.find({"title": {"$in": source_doc_ids}}))
-        docs = {doc["title"]: doc for doc in docs}
-        # Extract the links for each candidate/section
-        candidate_data = []
-        last_candidate = links_per_doc[0]["links_to"]
-        for link_doc in links_per_doc:
-            doc = docs.get(link_doc["source_doc"])
-            if doc:
-                # Save by candidate to make it easier to create an one-shot dataset and to split train/dev/test
-                if last_candidate != link_doc["links_to"] and candidate_data:
-                    candidate_links = {link_doc["links_to"]: candidate_data}
-                    links_file.write(json.dumps(candidate_links) + "\n")
-                    last_candidate = link_doc["links_to"]
-                    candidate_data = []
-
-                # To parse correctly everything
-                page = Page.from_mongo(doc, language=language)
-                section = page.get_section(clean_text(link_doc["source_doc_section"]))
-                # Get the query docs for these links
-                # should not fail, but we can have alpha as "A" in link info when linking to a section with alpha in the name (really rare)...
-                if section:
-                    item = get_dataset_item(section, link_doc, index_link)
-                    # That is, if it was a success
-                    if item["query_left"]:
-                        candidate_data.append(item)
-                        index_link = index_link + 1
-                else:
-                    logger.info(
-                        f"Section not found {link_doc['source_doc_section']} for {link_doc['source_doc']}"
-                    )
-            else:
-                logger.info(f"Doc not found {link_doc['source_doc']}")
-
-        batch_n = batch_n + 1
-        logger.info(f"Finished processing {batch_n * BATCH_SIZE} candidates")
-    links_file.close()
-    return True
-
-
-if args["max_rank"]:
-    logger.info(f"Getting abstracts from rank 0 to {args['max_rank']}")
-    abstracts = get_abstracts(0, args["max_rank"])
 else:
-    abstracts = get_abstracts(None, None)
+    abstracts = get_abstracts(
+        min_rank=None, max_rank=None, pages_collection=pages_collection
+    )
 
 all_ids = [a["candidate"] for a in abstracts]
 n_abstracts = len(all_ids)
@@ -215,7 +50,12 @@ with open(os.path.join(output_path, "candidates.jsonl"), "w") as f:
         json.dump(abstract, f)
         f.write("\n")
 # # Get the links
-links = create_links_dataset_by_agg(all_ids, output_path=output_path)
+links = create_links_dataset_by_agg(
+    abstract_titles=all_ids,
+    links_collection=links_collection,
+    pages_collection=pages_collection,
+    **args,
+)
 
 # Count the number of successful extracted candidates - if a doc is not found all_ids != total candidates
 count = 0
@@ -256,10 +96,14 @@ with open(os.path.join(output_path, "links.jsonl"), "r") as f:
 # Complete dataset size if it's not "full candidates list"
 if args["candidates_size"]:
     candidates_to_get = args["candidates_size"] - n_abstracts
-    rank_to_get = candidates_to_get + args["max_rank"]
+    rank_to_get = candidates_to_get + max_rank
     complete_candidates = get_abstracts(
-        args["max_rank"], rank_to_get, init_index=n_abstracts
+        min_rank=max_rank,
+        max_rank=rank_to_get,
+        pages_collection=pages_collection,
+        init_index=n_abstracts,
     )
+
     with open(os.path.join(output_path, "candidates.jsonl"), "a") as f:
         for abstract in complete_candidates:
             json.dump(abstract, f)
