@@ -109,7 +109,17 @@ python scripts/rank_by_links.py --mongo_uri mongodb://localhost:27017/ --languag
 ```
 
 1. Rank pages - 14 min DE
-2. Generate dataset - 09:01 started
+2. Rank pages - 11 min FR
+
+## Generate Entity Linking Dataset
+
+After extracting the links, we can generate the entity linking dataset. This can be done running the script generate_entity_linking_dataset.py. It expects the mongoDB connection string, the language code, the number of candidates and the number of mentions as arguments. Example:
+
+```bash
+python scripts/generate_entity_linking_dataset.py --mongo_uri mongodb://localhost:27017/ --language fr --max_rank 200000 --test_size 1000 --validation_size 1000 --candidates_size 1000000 --candidate_text_surfaces 10 --candidate_surface_appearance 2
+```
+
+19:43 started fr finished 20:48
 
 # TOTAL
 
