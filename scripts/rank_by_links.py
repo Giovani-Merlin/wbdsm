@@ -22,14 +22,13 @@ links_collection = client[db_name]["links"]
 pages_collection = client[db_name]["pages"]
 
 
-def analyze_dataset(links_collection):
+def rank_by_links(links_collection):
     """
-    Analyze the links dataset and return a dictionary with the following structure:
+    Rank pages on mongoDB by using the links collection. Also, return a dictionary with the following structure:
     {url: links : {mention_0: mention_0_count, mention_i: mention_i_count, ...},
           sum: sum_count,
           ranking: ranking_count }
 
-    At the moment just ranking is used, the counts could be used
     """
 
     logger.info("Counting unique text surfaces per page")
@@ -76,6 +75,6 @@ def analyze_dataset(links_collection):
     return agg_text_surfaces
 
 
-agg_text_surfaces = analyze_dataset(links_collection)
+agg_text_surfaces = rank_by_links(links_collection)
 
 logging.info("Done")

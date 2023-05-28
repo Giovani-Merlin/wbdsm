@@ -21,6 +21,7 @@ def create_links_dataset_by_agg(
     query_max_chars: int,
     sample_size: int,
     output_path: str,
+    **kwargs,
 ):
     links_query = {"$match": {"links_to": {"$in": abstract_titles}}}
     sample = {
