@@ -1,16 +1,19 @@
 <div align="center">
 <a href="https://www.buymeacoffee.com/giovanimerlin" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="41" width="174"></a>
-<iframe src="https://ghbtns.com/github-btn.html?user=giovani-merlin&repo=wbdsm&type=star&count=true&size=large" frameborder="0" scrolling="0" width="170" height="30" title="GitHub"></iframe>
+<a href="https://github.com/giovani-merlin/wbdsm" title="Go to GitHub repo"><img src="https://img.shields.io/static/v1?label=giovani-merlin&message=wbdsm&color=blue&logo=github" alt="giovani-merlin - wbdsm"></a>
+<br/>
+
 </div>
-<img src="/assets/wbdsm_logo.png"  style="height: 200px; width:200px;float: right;"/>
 
-# WBDSM
+# WBDSM 
+<img src="/assets/wbdsm_logo.png"  style="height: 220px; width:220px;margin: 0 0 0 15px;" align="right"/>
+Wikipedia Based Data-Set Maker
+  
 
- Wikipedia Based Data-Set Maker
 
 ## Objective
 
-WBDSM addresses a common challenge in Deep Learning NLP projects. While many repositories share preprocessed datasets to benefit the community, these datasets are often available only in English and lack the means for generating new datasets. The primary objective of WBDSM is to provide an effortless solution for creating reliable datasets from Wikipedia, supporting any language. Key features of WBDSM include:
+WBDSM addresses a common challenge in Deep Learning NLP projects. While many repositories share preprocessed datasets to benefit the community, these datasets are often available only in English and lack the means for generating new datasets. The primary objective of WBDSM is to provide an effortless solution for creating reliable datasets from Wikipedia, supporting any language. Key features of WBDSM include: 
 
 * Seamless data extraction from Wikipedia using the libraries wtf_wikipedia and dumpster-dive.
 * Modifying the output of dumpster-dive and introducing a dedicated library for efficient communication with the extracted data.
