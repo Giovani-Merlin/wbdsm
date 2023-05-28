@@ -1,36 +1,37 @@
-# WBDSM
 
-Wikipedia Based Data-Set Maker
+# WBDSM<img src="/assets/wbdsm_logo.png"  style="height: 200px; width:200px;float: right;"/>
+
+ Wikipedia Based Data-Set Maker
 
 ## Objective
 
-Many DeepLearning NLP repositories share their datasets, already processed, in order to help the community. However, most of them are in English, and normally they don't provide an way for generating the datset - just the final result. This project aims to:
+WBDSM addresses a common challenge in Deep Learning NLP projects. While many repositories share preprocessed datasets to benefit the community, these datasets are often available only in English and lack the means for generating new datasets. The primary objective of WBDSM is to provide an effortless solution for creating reliable datasets from Wikipedia, supporting any language. Key features of WBDSM include:
 
-1. Provide an easy way to create different reliable datasets from Wikipedia - for any language.
-2. Use the strong-consolidated library [wtf_wikipedia](https://github.com/spencermountain/wtf_wikipedia) and [dumpster-dive](www.github.com/spencermountain/dumpster-dive) to extract the data from Wikipedia.
-3. Change the output of dumpster-dive and provide a library to comunicate with it.
-4. Do the processing in an efficient way, using celery and redis to parallelize the processing.
+* Seamless data extraction from Wikipedia using the libraries wtf_wikipedia and dumpster-dive.
+* Modifying the output of dumpster-dive and introducing a dedicated library for efficient communication with the extracted data.
+* Employing advanced processing techniques with Celery and Redis to parallelize operations, ensuring optimal performance.
 
 ## Applications
 
-1. Entity Linking - The only one finished up to now.
-2. Entity recognition - TODO - can be easily done with the output of the entity linking.
+WBDSM offers a range of applications to facilitate various NLP tasks:
+
+1. Entity Linking: WBDSM provides a complete and robust solution for generating entity linking datasets. This application is already implemented and available.
+2. Entity Recognition: In progress. Utilizing the output of entity linking, entity recognition can be easily accomplished.
 3. ...
 
 ## What it provides
 
-HERE LINK TO DOCS
+To empower users in their dataset creation endeavors, WBDSM offers the following components:
 
-1. Index data in a specific format that enables us to generate different datasets - mongodb_format.md
-2. Map redirects.
-3. Classes to communicate with the indexed data.
-4. Functions to enhance data (i.g, add wikipedia ranking based in linking references)
-5. Script to generate Entity Linking dataset.
+1. Documentation for indexing data in a specific format, enabling the generation of diverse datasets (see mongodb_format.md).
+2. Redirect mapping functionality, ensuring accurate connections between related pages.
+3. Well-designed classes to facilitate seamless communication with the indexed data.
+4. Feature-rich functions to enhance data, including the ability to incorporate Wikipedia ranking based on linking references.
+5. A comprehensive script for generating Entity Linking datasets.
 
 ## TODO
 
-- [ ] Add wikidata info to the dataset
-- [ ] Optimize storage management for entity linking (keeping ids as full title string)
+* [ ] Add wikidata info to the dataset
 
 ## Requirements
 
@@ -50,9 +51,6 @@ cd dumpster
 npm instlal .
 node index_wiki_mongo.js ~/Downloads/wikipedia/fr/frwiki-20230501-pages-articles-multistream.xml de mongodb://localhost:27017/ 
 ```
-
-This will take a while (75 min for the english wikipedia, 20 for german*)
-/* Using 12th Gen Intel(R) Core(TM) i7-12700H
 
 ## Extract links
 
@@ -83,9 +81,6 @@ language="fr"
 python extract_links_app.py --mongo_uri $mongo_uri --language $language
 ```
 
-1:53 for 2.48M articles generating 53.8M links DE
-1:37 for 2.42 M articles generating 44.7M links FR
-
 If you need to purge the queues, run:
 
 ```bash
@@ -108,9 +103,6 @@ After extracting the links, we can rank the pages based on the number of links t
 python scripts/rank_by_links.py --mongo_uri mongodb://localhost:27017/ --language fr
 ```
 
-1. Rank pages - 14 min DE
-2. Rank pages - 11 min FR
-
 ## Generate Entity Linking Dataset
 
 After extracting the links, we can generate the entity linking dataset. This can be done running the script generate_entity_linking_dataset.py. It expects the mongoDB connection string, the language code, the number of candidates and the number of mentions as arguments. Example:
@@ -119,14 +111,15 @@ After extracting the links, we can generate the entity linking dataset. This can
 python scripts/generate_entity_linking_dataset.py --mongo_uri mongodb://localhost:27017/ --language fr --max_rank 200000 --test_size 1000 --validation_size 1000 --candidates_size 1000000 --candidate_text_surfaces 10 --candidate_surface_appearance 2
 ```
 
-19:43 started fr finished 20:48
+### Time to generate the dataset
 
-# TOTAL
+Using 12th Gen Intel(R) Core(TM) i7-12700H
 
-75 min wikipedia dump
+1. 75 min to process dumpster-dive for english wikipedia, 20 for the german one.
+2. 3h16 to extract links for english wikipedia (113M links), 1h53 for the german one (53.8M links).
+3. Rank pages - 14 min DE and 40 min EN
+4. Generate dataset* - 1h15 DE. Something close ofr the EN one.
 
-Extraction started 23:30 -> 24gb memory redis uses a lot, max to 26 and 5 swap . 5gb Just for turning on the workers, 22gb to run mongo
+Memory used for the EN dataset: 26GB.
 
-3h16 td 113m
-40 min to count and index rank
-11:15 started dataset 100k 10 10 1kk candidates
+\* 200k max rank, 1M candidates, 2 candidate_surface_appearance, 10 candidate_text_surfaces - generated +- 1.1M entries.
