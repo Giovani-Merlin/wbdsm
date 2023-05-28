@@ -1,7 +1,6 @@
 <div align="center">
 <a href="https://www.buymeacoffee.com/giovanimerlin" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="41" width="174"></a>
 <a href="https://github.com/giovani-merlin/wbdsm" title="Go to GitHub repo"><img src="https://img.shields.io/static/v1?label=giovani-merlin&message=wbdsm&color=blue&logo=github" alt="giovani-merlin - wbdsm"></a>
-<a href="https://github.com/giovani-merlin/wbdsm"><img src="https://img.shields.io/github/stars/giovani-merlin/wbdsm?style=social" alt="stars - wbdsm"></a>
 <br/>
 
 </div>
