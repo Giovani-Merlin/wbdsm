@@ -35,11 +35,17 @@ max_rank = args["max_rank"]
 if max_rank:
     logger.info(f"Getting abstracts from rank 0 to {max_rank}")
     abstracts = get_abstracts(
-        min_rank=0, max_rank=max_rank, pages_collection=pages_collection
+        min_rank=0,
+        max_rank=max_rank,
+        pages_collection=pages_collection,
+        max_chars=args["max_chars"],
     )
 else:
     abstracts = get_abstracts(
-        min_rank=None, max_rank=None, pages_collection=pages_collection
+        min_rank=None,
+        max_rank=None,
+        pages_collection=pages_collection,
+        max_chars=args["max_chars"],
     )
 
 all_ids = [a["candidate"] for a in abstracts]
@@ -102,6 +108,7 @@ if args["candidates_size"]:
         max_rank=rank_to_get,
         pages_collection=pages_collection,
         init_index=n_abstracts,
+        max_chars=args["max_chars"],
     )
 
     with open(os.path.join(output_path, "candidates.jsonl"), "a") as f:

@@ -108,7 +108,11 @@ def create_links_dataset_by_agg(
 
 
 def get_abstracts(
-    min_rank: int, max_rank: int, pages_collection: Collection, init_index: int = 0
+    min_rank: int,
+    max_rank: int,
+    pages_collection: Collection,
+    init_index: int = 0,
+    max_chars: int = 1000,
 ):
     """
     Get abstracts from min_rank to max_rank.
@@ -141,7 +145,7 @@ def get_abstracts(
             abstract_total.append(
                 {
                     "candidate": row["title"],
-                    "abstract": abstract,
+                    "abstract": abstract[:max_chars],
                     "reference_rank": row["reference_rank"],
                     "candidate_index": index + init_index,
                 }

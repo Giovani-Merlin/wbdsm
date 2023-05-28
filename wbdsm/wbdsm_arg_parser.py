@@ -34,7 +34,7 @@ class WBDSMArgParser(argparse.ArgumentParser):
             "--max_chars",
             default=2048,
             type=int,
-            help="Max chars to keep for entity description and for query left + right",
+            help="Max chars to keep for candidate's description and for query left + right",
             metavar="\b",
         )
         self.add_argument(
