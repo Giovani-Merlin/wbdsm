@@ -1,5 +1,10 @@
+<div align="center">
+<a href="https://www.buymeacoffee.com/giovanimerlin" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="41" width="174"></a>
+<iframe src="https://ghbtns.com/github-btn.html?user=giovani-merlin&repo=wbdsm&type=star&count=true&size=large" frameborder="0" scrolling="0" width="170" height="30" title="GitHub"></iframe>
+</div>
+<img src="/assets/wbdsm_logo.png"  style="height: 200px; width:200px;float: right;"/>
 
-# WBDSM<img src="/assets/wbdsm_logo.png"  style="height: 200px; width:200px;float: right;"/>
+# WBDSM
 
  Wikipedia Based Data-Set Maker
 
@@ -48,7 +53,7 @@ This section is just the use of dumpster-dive, with some changes of the default 
 
 ```bash
 cd dumpster
-npm instlal .
+npm install .
 node index_wiki_mongo.js ~/Downloads/wikipedia/fr/frwiki-20230501-pages-articles-multistream.xml de mongodb://localhost:27017/ 
 ```
 
