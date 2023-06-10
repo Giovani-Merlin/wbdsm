@@ -5,15 +5,14 @@
 
 </div>
 
-# WBDSM 
+# WBDSM
+
 <img src="/assets/wbdsm_logo.png"  style="height: 220px; width:220px;margin: 0 0 0 15px;" align="right"/>
 Wikipedia Based Data-Set Maker
   
-
-
 ## Objective
 
-WBDSM addresses a common challenge in Deep Learning NLP projects. While many repositories share preprocessed datasets to benefit the community, these datasets are often available only in English and lack the means for generating new datasets. The primary objective of WBDSM is to provide an effortless solution for creating reliable datasets from Wikipedia, supporting any language. Key features of WBDSM include: 
+WBDSM addresses a common challenge in Deep Learning NLP projects. While many repositories share preprocessed datasets to benefit the community, these datasets are often available only in English and lack the means for generating new datasets. The primary objective of WBDSM is to provide an effortless solution for creating reliable datasets from Wikipedia, supporting any language. Key features of WBDSM include:
 
 * Seamless data extraction from Wikipedia using the libraries wtf_wikipedia and dumpster-dive.
 * Modifying the output of dumpster-dive and introducing a dedicated library for efficient communication with the extracted data.
@@ -57,12 +56,12 @@ This section is just the use of dumpster-dive, with some changes of the default 
 ```bash
 cd dumpster
 npm install .
-node index_wiki_mongo.js ~/Downloads/wikipedia/fr/frwiki-20230501-pages-articles-multistream.xml de mongodb://localhost:27017/ 
+node index_wiki_mongo.js ~/Downloads/wikipedia/en/enwiki-20230401-pages-articles-multistream.xml en mongodb://localhost:27017/ 
 ```
 
 ## Extract links
 
-As the full wikipedia dump has a lot of pages, and for extracting the links we need to map the links to the correct page, we need to do it in a efficient way. For that, we use celery and redis to parallelize the processing using a queue system.
+As the full wikipedia dump has a lot of pages, and for extracting the links we need to map the links to the correct page, we need to do it in a efficient way. For that, we use celery and redis to parallelize the processing using a queue system. Try to give enough run for Redis when processing for the EN wikipedia, giving its huge size.
 
 1. Pull redis `docker pull redis` and run it `docker run --name redis_celery -d -p 6379:6379 redis | docker run redis`
 2. ~Change the attributes in IndexMentions class on wbdsm.links.extract_links_task to match the desired language and mongoDB connection string.~ Problem with the bootsraping of the celery app, for now changing it manually. If you know why the bootstraping is not working, please let me know.
@@ -71,21 +70,21 @@ As the full wikipedia dump has a lot of pages, and for extracting the links we n
 ```bash
 cd celery/links
 mongo_uri="mongodb://localhost:27017"
-language="fr"
+language="en"
 celery -A extract_links_worker worker -Ofair --queues=links_to_extract --loglevel=info --concurrency=17 --language $language --mongo_uri $mongo_uri -n extract
 ```
 
 ```bash
 cd celery/links
 mongo_uri="mongodb://localhost:27017"
-language="fr"
-celery -A extract_links_worker worker -Ofair --queues=links_to_index --loglevel=info --concurrency=2  --language $language --mongo_uri $mongo_uri -n index
+language="en"
+celery -A extract_links_worker worker -Ofair --queues=links_to_index --loglevel=info --concurrency=5  --language $language --mongo_uri $mongo_uri -n index
 ```
 
 ```bash
 cd celery/links
 mongo_uri="mongodb://localhost:27017"
-language="fr"
+language="en"
 python extract_links_app.py --mongo_uri $mongo_uri --language $language
 ```
 
@@ -124,10 +123,20 @@ python scripts/generate_entity_linking_dataset.py --mongo_uri mongodb://localhos
 Using 12th Gen Intel(R) Core(TM) i7-12700H
 
 1. 75 min to process dumpster-dive for english wikipedia, 20 for the german one.
-2. 3h16 to extract links for english wikipedia (113M links), 1h53 for the german one (53.8M links).
-3. Rank pages - 14 min DE and 40 min EN
-4. Generate dataset* - 1h15 DE. Something close ofr the EN one.
+2. 3h16 to extract links for english wikipedia (113M links) - 3 min indexing and started process on 16:47:19, 1h53 for the german one (53.8M links).
+3. Rank pages - 14 min DE and 40 min EN - 1h6 agr
+4. Generate dataset* - 1h15 DE. Something close ofr the EN one. 1h 10 100k with sample size of 30M (just increase to 7m the groupby...) 1.4M
 
 Memory used for the EN dataset: 26GB.
 
 \* 200k max rank, 1M candidates, 2 candidate_surface_appearance, 10 candidate_text_surfaces - generated +- 1.1M entries.
+
+For 5 candidate surface, 1M, 100k, 10 candidates surfaces -> 1M FR and 1h05
+
+EN wikipedia: 19GB Pages,n Links +23 GB (7.5 GB from _id, to optimize) + celery workers. Be sure to have at least 40GB Ram more swap.
+
+72kk 22:17 94.6 at 23:49 => 1h32 for 22.6M (double of the expected time)
+
+# Improve test set
+
+Test set and validation sets, needs to have more candidates / maybe bm25 before creating it

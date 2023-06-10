@@ -84,13 +84,26 @@ if __name__ == "__main__":
         logger.info(f"Processed {n_pages} pages")
         page_batch = []
         # Avoid memory overflow
-        if n_pages % 100000 == 0:
-            queue_size = broker.queues(["links_to_extract"]).result()[0]["messages"]
-            logger.info(f"Queue size: {queue_size}")
+        if n_pages % 50000 == 0:
+            index_queue_size = broker.queues(["links_to_index"]).result()[0]["messages"]
+            logger.info(f"Index Queue size: {index_queue_size}")
+            while index_queue_size > 50:
+                index_queue_size = broker.queues(["links_to_index"]).result()[0][
+                    "messages"
+                ]
+                logger.info(f"Index Queue size: {index_queue_size}")
+                time.sleep(1)
+
+            extract_queue_size = broker.queues(["links_to_extract"]).result()[0][
+                "messages"
+            ]
+            logger.info(f"Extract Queue size: {extract_queue_size}")
             # Wait to reduce queue
-            while queue_size > 50:
-                queue_size = broker.queues(["links_to_extract"]).result()[0]["messages"]
-                logger.info(f"Queue size: {queue_size}")
+            while extract_queue_size > 50:
+                extract_queue_size = broker.queues(["links_to_extract"]).result()[0][
+                    "messages"
+                ]
+                logger.info(f"Extract Queue size: {extract_queue_size}")
                 time.sleep(1)
 
     # Wait to finish all jobs
