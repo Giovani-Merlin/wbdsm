@@ -27,7 +27,7 @@ class IndexLinks(Task):
     abstract = True
 
     mongo_uri = "mongodb://localhost:27017"
-    language = "de"
+    language = "en"
 
     # the cached requests.session object
     def __init__(self):

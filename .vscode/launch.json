@@ -5,6 +5,14 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "Bash-Debug (type in script name)",
+            "cwd": "${workspaceFolder}",
+            "program": "${file}",
+            "args": ["fr"]
+        },
+        {
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",
@@ -12,14 +20,19 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [
-                "--language","de",
+                "--language","en",
                 "--mongo_uri","mongodb://localhost:27017",
                 "--max_rank","100000",
                 "--test_size","1000",
                 "--validation_size","1000",
-                "--candidates_size","2000000",
-                "--candidate_text_surfaces","10"
+                "--candidates_size","1000000",
+                "--candidate_text_surfaces","10",
+                "--candidate_surface_appearance", "5",
+                "--output_path","data/bef_format/en/with_5_surface100k",
+                "--last_pageID","59254971",
+                "--sample_size","30000000"
             ]
+            
         }
     ]
 }

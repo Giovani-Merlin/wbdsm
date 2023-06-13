@@ -130,13 +130,3 @@ Using 12th Gen Intel(R) Core(TM) i7-12700H
 Memory used for the EN dataset: 26GB.
 
 \* 200k max rank, 1M candidates, 2 candidate_surface_appearance, 10 candidate_text_surfaces - generated +- 1.1M entries.
-
-For 5 candidate surface, 1M, 100k, 10 candidates surfaces -> 1M FR and 1h05
-
-EN wikipedia: 19GB Pages,n Links +23 GB (7.5 GB from _id, to optimize) + celery workers. Be sure to have at least 40GB Ram more swap.
-
-72kk 22:17 94.6 at 23:49 => 1h32 for 22.6M (double of the expected time)
-
-# Improve test set
-
-Test set and validation sets, needs to have more candidates / maybe bm25 before creating it
