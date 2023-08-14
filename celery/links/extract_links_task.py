@@ -47,27 +47,42 @@ class IndexLinks(Task):
         print("loaded")
 
 
-# ! NOT WORKING
 # https://stackoverflow.com/questions/27070485/initializing-a-worker-with-arguments-using-celery
 # Make bootstep to add custom arguments
 
 
-class CustomArgs(bootsteps.Step):
-    def __init__(self, worker, mongo_uri, language, **options):
-        super().__init__(worker, **options)
+class CustomArgs(bootsteps.StartStopStep):
+    def __init__(self, parent, mongo_uri, language, **options):
+        super().__init__(parent, **options)
+        print("{0!r} is in init".format(parent))
         print("Storing language and data_path")
         print("Language: ", language)
         print("Mongo URI: ", mongo_uri)
-        IndexLinks.language = language[0]
-        IndexLinks.mongo_uri = mongo_uri[0]
+        IndexLinks.language = language
+        IndexLinks.mongo_uri = mongo_uri
+
+    def on_before_init(self, parent):
+        print("{0!r} is in on_before_init".format(parent))
 
     def start(self, parent):
         # our step is started together with all other Worker/Consumer
         # bootsteps.
         print("{0!r} is starting".format(parent))
 
+    def stop(self, parent):
+        # the Consumer calls stop every time the consumer is
+        # restarted (i.e., connection is lost) and also at shutdown.
+        # The Worker will call stop at shutdown only.
+        print("{0!r} is stopping".format(parent))
+
+    def shutdown(self, parent):
+        # shutdown is called by the Consumer at shutdown, it's not
+        # called by Worker.
+        print("{0!r} is shutting down".format(parent))
+
 
 app.steps["worker"].add(CustomArgs)
+# app.steps["consumer"].add(CustomArgs)
 
 
 # Could parse the article in different ways, like getting the text per paragraph, ignoring lists, depends on the objective. To match Zeshel's and mewsli's (uses wikiextractor) we will just append all the texts.
@@ -94,15 +109,11 @@ def extract_links_task(self, skip: str, limit: int, min_query_size: int = 50):
     logger.info("Getting articles from pages collection")
     # Get pages from pages collection
     pages = list(
-        self.pages_collection.find({"isRedirect": False, "pageID": {"$gt": skip}})
-        .sort("pageID", 1)
-        .limit(limit)
+        self.pages_collection.find({"isRedirect": False, "pageID": {"$gt": skip}}).sort("pageID", 1).limit(limit)
     )
     # Transform in dataclasses to make it easier to work with and encapsulate parsing/cleaning logic
     pages_obj = [Page.from_mongo(page, self.language) for page in pages]
-    links = extract_links(
-        pages_obj, pages_collection=self.pages_collection, min_query_size=min_query_size
-    )
+    links = extract_links(pages_obj, pages_collection=self.pages_collection, min_query_size=min_query_size)
     return links
 
 
