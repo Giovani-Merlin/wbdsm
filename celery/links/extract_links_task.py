@@ -26,14 +26,19 @@ logger = logging.getLogger(__name__)
 class IndexLinks(Task):
     abstract = True
 
-    mongo_uri = "mongodb://localhost:27017"
-    language = "en"
+    mongo_uri = "mongodb://localhost:27017/"
+    language = "de"
 
-    # the cached requests.session object
-    def __init__(self):
-        #
-        self.language = IndexLinks.language
-        self.mongo_uri = IndexLinks.mongo_uri
+    def __init__(self) -> None:
+        super().__init__()
+        # just for DEBUG
+        self.init_after_bootsteps(IndexLinks.language, IndexLinks.mongo_uri)
+
+    def init_after_bootsteps(self, language, mongo_uri) -> None:
+        #  def before_start(self, task_id, args, kwargs):
+        # super().before_start(task_id, args, kwargs)
+        self.language = language
+        self.mongo_uri = mongo_uri
         print(self.language)
         print(self.mongo_uri)
         db_name = self.language + "wiki"
@@ -52,22 +57,25 @@ class IndexLinks(Task):
 
 
 class CustomArgs(bootsteps.StartStopStep):
-    def __init__(self, parent, mongo_uri, language, **options):
+    requires = {"celery.worker.consumer.tasks:Tasks"}
+
+    def __init__(self, parent, mongo_uri="blabla", language="de", **options):
         super().__init__(parent, **options)
         print("{0!r} is in init".format(parent))
         print("Storing language and data_path")
         print("Language: ", language)
         print("Mongo URI: ", mongo_uri)
-        IndexLinks.language = language
-        IndexLinks.mongo_uri = mongo_uri
+        self.language = language
+        self.mongo_uri = mongo_uri
 
-    def on_before_init(self, parent):
-        print("{0!r} is in on_before_init".format(parent))
+    def create(self, parent):
+        return super().create(parent)
 
     def start(self, parent):
         # our step is started together with all other Worker/Consumer
         # bootsteps.
         print("{0!r} is starting".format(parent))
+        parent.app.tasks["index_links_task"].init_after_bootsteps(self.language, self.mongo_uri)
 
     def stop(self, parent):
         # the Consumer calls stop every time the consumer is
@@ -81,8 +89,8 @@ class CustomArgs(bootsteps.StartStopStep):
         print("{0!r} is shutting down".format(parent))
 
 
-app.steps["worker"].add(CustomArgs)
-# app.steps["consumer"].add(CustomArgs)
+# app.steps["worker"].add(CustomArgs)
+app.steps["consumer"].add(CustomArgs)
 
 
 # Could parse the article in different ways, like getting the text per paragraph, ignoring lists, depends on the objective. To match Zeshel's and mewsli's (uses wikiextractor) we will just append all the texts.
