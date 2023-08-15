@@ -11,8 +11,16 @@ from pymongo import MongoClient
 
 from celery import chain
 from wbdsm.wbdsm_arg_parser import WBDSMArgParser
+import asyncio
 
 logger = logging.getLogger(__name__)
+
+
+def get_queue_size(broker, queue_name):
+    queue = asyncio.run(broker.queues([queue_name]))
+    return queue[0]["messages"]
+
+
 if __name__ == "__main__":
     #
 
@@ -38,10 +46,9 @@ if __name__ == "__main__":
     i = app.control.inspect()
     # to track the status of the tasks
     broker = Broker(broker_url)
+    index_queue_size = get_queue_size(broker, "links_to_index")
     # Create compound index between pageID and isRedirect
-    pages.create_index(
-        [("isRedirect", pymongo.DESCENDING), ("pageID", pymongo.ASCENDING)]
-    )
+    pages.create_index([("isRedirect", pymongo.DESCENDING), ("pageID", pymongo.ASCENDING)])
     # Create title index - used to find pages by title given in links
     pages.create_index("title")
     # Do first page
@@ -50,11 +57,7 @@ if __name__ == "__main__":
         articles = list(pages.find({"isRedirect": False}).sort("pageID", 1).limit(1))
     else:
         # Note that last_id must be already encoded - kept in this way to make it easier to recover from a crash (logs are in encoded form)
-        articles = list(
-            pages.find({"pageID": {"$gte": last_id}, "isRedirect": False})
-            .sort("pageID", 1)
-            .limit(1)
-        )
+        articles = list(pages.find({"pageID": {"$gte": last_id}, "isRedirect": False}).sort("pageID", 1).limit(1))
 
     all_jobs.append(
         chain(
@@ -85,37 +88,31 @@ if __name__ == "__main__":
         page_batch = []
         # Avoid memory overflow
         if n_pages % 50000 == 0:
-            index_queue_size = broker.queues(["links_to_index"]).result()[0]["messages"]
+            index_queue_size = get_queue_size(broker, "links_to_index")
             logger.info(f"Index Queue size: {index_queue_size}")
             while index_queue_size > 50:
-                index_queue_size = broker.queues(["links_to_index"]).result()[0][
-                    "messages"
-                ]
+                index_queue_size = get_queue_size(broker, "links_to_index")
                 logger.info(f"Index Queue size: {index_queue_size}")
                 time.sleep(1)
 
-            extract_queue_size = broker.queues(["links_to_extract"]).result()[0][
-                "messages"
-            ]
+            extract_queue_size = get_queue_size(broker, "links_to_extract")
             logger.info(f"Extract Queue size: {extract_queue_size}")
             # Wait to reduce queue
             while extract_queue_size > 50:
-                extract_queue_size = broker.queues(["links_to_extract"]).result()[0][
-                    "messages"
-                ]
+                extract_queue_size = get_queue_size(broker, "links_to_extract")
                 logger.info(f"Extract Queue size: {extract_queue_size}")
                 time.sleep(1)
 
     # Wait to finish all jobs
     # Could use results backend but given the size of the data, it is not worth it
     # Easily we can overflow redis memory
-    indexing_jobs = broker.queues(["links_to_index"]).result()[0]["messages"]
-    extract_jobs = broker.queues(["links_to_extract"]).result()[0]["messages"]
+    indexing_jobs = get_queue_size(broker, "links_to_index")
+    extract_jobs = get_queue_size(broker, "links_to_extract")
     jobs = indexing_jobs + extract_jobs
     while jobs:
         time.sleep(1)
-        indexing_jobs = broker.queues(["links_to_index"]).result()[0]["messages"]
-        extract_jobs = broker.queues(["links_to_extract"]).result()[0]["messages"]
+        indexing_jobs = get_queue_size(broker, "links_to_index")
+        extract_jobs = get_queue_size(broker, "links_to_extract")
         jobs = indexing_jobs + extract_jobs
         logger.info(f"Jobs: {jobs}")
 
